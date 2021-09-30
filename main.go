@@ -23,13 +23,13 @@ func main() {
 	z := html.NewTokenizer(f)
 
 	depth := 0
-loop:
+	//loop:
 	for {
 		tt := z.Next()
 		switch tt {
 		case html.ErrorToken:
 			fmt.Println(z.Err())
-			break loop
+			return
 		case html.TextToken:
 			if depth > 0 {
 				// emitBytes should copy the []byte it receives,
@@ -39,21 +39,19 @@ loop:
 		case html.StartTagToken, html.EndTagToken:
 			tn, _ := z.TagName()
 			if tt == html.StartTagToken {
-				if string(tn) == `thead` {
-					parseColumns(f)
-				}
+				parseColumns(f)
 				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
 				depth++
 			} else {
 				depth--
 				myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
 			}
-		case html.SelfClosingTagToken:
-			tn, _ := z.TagName()
-			myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
-		default:
-			tn, _ := z.TagName()
-			myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
+			case html.SelfClosingTagToken:
+				tn, _ := z.TagName()
+				myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
+			default:
+				tn, _ := z.TagName()
+				myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
 		}
 	}
 }
@@ -84,7 +82,7 @@ func parseColumns(reader io.Reader) {
 	//if string(tn) != `th` {
 	//	return
 	//}
-	
+
 	//cols:=[]string{}
 	//loop:
 	for {
@@ -104,10 +102,6 @@ func parseColumns(reader io.Reader) {
 	}
 
 }
-
-
-
-
 
 type infoLogger struct {
 	file *os.File
