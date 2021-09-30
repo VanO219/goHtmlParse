@@ -39,7 +39,10 @@ loop:
 		case html.StartTagToken, html.EndTagToken:
 			tn, _ := z.TagName()
 			if tt == html.StartTagToken {
-				myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				if string(tn) == `thead` {
+					parseColumns(f)
+				}
+				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
 				depth++
 			} else {
 				depth--
@@ -74,12 +77,29 @@ func parseColumns(reader io.Reader) {
 		return
 	}
 	tt = z.Next()
+	if tt != html.StartTagToken {
+		return
+	}
+	//tn, _ = z.TagName()
+	//if string(tn) != `th` {
+	//	return
+	//}
+	
 	//cols:=[]string{}
 	//loop:
 	for {
 		tt = z.Next()
 		switch tt {
 		case html.StartTagToken:
+			if tt == html.TextToken {
+				myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
+			}
+			continue
+		case html.EndTagToken:
+			if tn, _ = z.TagName(); string(tn) != `tr` {
+				return
+			}
+			continue
 		}
 	}
 
