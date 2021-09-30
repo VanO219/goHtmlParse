@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"golang.org/x/net/html"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+	"golang.org/x/net/html"
 )
 
 var (
@@ -30,34 +30,45 @@ func main() {
 		case html.ErrorToken:
 			fmt.Println(z.Err())
 			return
-		case html.TextToken:
-			if depth > 0 {
-				// emitBytes should copy the []byte it receives,
-				// if it doesn't process it immediately.
-				myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
-			}
+		//case html.TextToken:
+		//	if depth > 0 {
+		//		// emitBytes should copy the []byte it receives,
+		//		// if it doesn't process it immediately.
+		//		myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
+		//	}
 		case html.StartTagToken, html.EndTagToken:
-			tn, _ := z.TagName()
+			//tn, _ := z.TagName()
 			if tt == html.StartTagToken {
-				parseColumns(f)
+				//myLog.write(tagname(z))
 				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				//log.Println(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				fmt.Println(z.Text())
+				if tagname(z) == `table` {
+					parseColumns(z)
+				}
 				depth++
 			} else {
 				depth--
-				myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
+				//myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
+				continue
 			}
-			case html.SelfClosingTagToken:
-				tn, _ := z.TagName()
-				myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
-			default:
-				tn, _ := z.TagName()
-				myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
+		case html.SelfClosingTagToken:
+			//tn, _ := z.TagName()
+			//myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
+			continue
+		default:
+			//tn, _ := z.TagName()
+			//myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
+			continue
 		}
 	}
 }
-
-func parseColumns(reader io.Reader) {
-	z := html.NewTokenizer(reader)
+func tagname(t *html.Tokenizer) (out string) {
+	bs, _ := t.TagName()
+	return string(bs)
+}
+func parseColumns(z *html.Tokenizer) {
+	//z := html.NewTokenizer(reader)
 	tt := z.Next()
 	if tt != html.StartTagToken {
 		return
@@ -66,11 +77,24 @@ func parseColumns(reader io.Reader) {
 	if string(tn) != `thead` {
 		return
 	}
+	headers := parseHeaders(z)
+	myLog.write(fmt.Sprintf(`%v`, headers))
 	tt = z.Next()
+	if tt != html.EndTagToken {
+		tn, _ := z.TagName()
+		if string(tn) != `thead` {
+			return
+		}
+	}
+}
+
+func parseHeaders(z *html.Tokenizer) (out []string) {
+	//z := html.NewTokenizer(in)
+	tt := z.Next()
 	if tt != html.StartTagToken {
 		return
 	}
-	tn, _ = z.TagName()
+	tn, _ := z.TagName()
 	if string(tn) != `tr` {
 		return
 	}
@@ -78,26 +102,27 @@ func parseColumns(reader io.Reader) {
 	if tt != html.StartTagToken {
 		return
 	}
-	//tn, _ = z.TagName()
-	//if string(tn) != `th` {
-	//	return
-	//}
-
-	//cols:=[]string{}
-	//loop:
+loop:
 	for {
 		tt = z.Next()
+		myLog.write(fmt.Sprintf("swich %s", tt.String()))
 		switch tt {
 		case html.StartTagToken:
-			if tt == html.TextToken {
-				myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
+			bs, _ := z.TagName()
+			if string(bs) != `th` {
+				continue loop
 			}
-			continue
+			tt = z.Next()
+			if tt != html.TextToken {
+				myLog.write(string(z.Text()))
+				// TODO отработать вложенные елементыы
+				continue loop
+			}
+			out = append(out, string(z.Text()))
 		case html.EndTagToken:
 			if tn, _ = z.TagName(); string(tn) != `tr` {
 				return
 			}
-			continue
 		}
 	}
 
