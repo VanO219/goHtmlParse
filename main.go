@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,13 +13,13 @@ import (
 )
 
 var (
-	myLog     *infoLogger
-	z         *html.Tokenizer
-	tgname    string
-	tgtext    string
-	tableRows []Information
-	depth     = 0
-	data      = []string{}
+	myLog  *infoLogger
+	z      *html.Tokenizer
+	tgname string
+	tgtext string
+	res    []Information
+	depth  = 0
+	data   = []string{}
 )
 
 func main() {
@@ -64,10 +65,63 @@ loop:
 			continue
 		}
 	}
-	fmt.Println(len(tableRows))
-	for i, j := range tableRows {
-		fmt.Println(i, j)
+
+	//диапазон цен
+	priceRangee := strings.Replace(priceRange(), ".", ",", -1)
+	//выручка топ 10
+	top10Revenuee := strings.Replace(top10Revenue(), ".", ",", -1)
+	//среднее количество комментариев
+	average10Commentss := strings.Replace(average10Comments(), ".", ",", -1)
+	//упущенная выручка топ 30
+	lost30Revenuee := strings.Replace(lost30Revenue(), ".", ",", -1)
+	//оборот 50 поставщика
+	vendor50 := strings.Replace(fmt.Sprintf("%.2f", res[50].Revenue), ".", ",", -1)
+
+	myLog.write(fmt.Sprintf("диапазон цен: \t%s ", priceRangee))
+	myLog.write(fmt.Sprintf("выручка топ 10: \t%s", top10Revenuee))
+	myLog.write(fmt.Sprintf("среднее количество комментариев: \t%s", average10Commentss))
+	myLog.write(fmt.Sprintf("упущенная выручка топ 30: \t%s", lost30Revenuee))
+	myLog.write(fmt.Sprintf("оборот 50 поставщика: \t%s", vendor50))
+}
+
+func priceRange() string {
+	minPrice := res[0].Price
+	maxPrice := res[0].Price
+	for i := 1; i < 50; i++ {
+		if res[i].Price < minPrice {
+			minPrice = res[i].Price
+		}
+		if res[i].Price > maxPrice {
+			maxPrice = res[i].Price
+		}
 	}
+	return fmt.Sprintf(`%.2f - %.2f`, minPrice, maxPrice)
+}
+
+func top10Revenue() string {
+	r := 0.0
+	for i := 0; i < 10; i++ {
+		r += res[i].Revenue
+	}
+	return fmt.Sprintf(`%.2f`, r)
+}
+
+func average10Comments() string {
+	var r float64
+	for i := 0; i < 10; i++ {
+		r += float64(res[i].NumberOfReviews)
+	}
+	v := r / 10
+	re := math.Round(v)
+	return fmt.Sprintf(`%.2f`, re)
+}
+
+func lost30Revenue() string {
+	r := 0.0
+	for i := 0; i < 30; i++ {
+		r += res[i].LP
+	}
+	return fmt.Sprintf(`%.2f`, r)
 }
 
 func tableBodyParse() {
@@ -153,7 +207,7 @@ loop:
 	if len(data) < 14 && len(data) > 0 {
 		parseNotFull()
 		data = []string{}
-	}else if len(data) > 0 && len(data) == 14 {
+	} else if len(data) > 0 && len(data) == 14 {
 		parseFull()
 		data = []string{}
 	}
@@ -319,7 +373,7 @@ func parseFull() {
 			if j == `null` {
 				inf.Revenue = 0
 				i = 0
-				tableRows = append(tableRows, inf)
+				res = append(res, inf)
 				inf = Information{}
 			} else {
 				tx := strings.Replace(j, " руб.", "", -1)
@@ -330,14 +384,14 @@ func parseFull() {
 				}
 				inf.Revenue = nm
 				i = 0
-				tableRows = append(tableRows, inf)
+				res = append(res, inf)
 				inf = Information{}
 			}
 		}
 	}
 }
 
-func parseNotFull()  {
+func parseNotFull() {
 	//myLog.write(fmt.Sprintf("parseNotFull len: %d, \n %s", len(data), data))
 	inf := Information{}
 	for i, j := range data {
@@ -432,7 +486,7 @@ func parseNotFull()  {
 			if j == `null` {
 				inf.Revenue = 0
 				i = 0
-				tableRows = append(tableRows, inf)
+				res = append(res, inf)
 				inf = Information{}
 			} else {
 				tx := strings.Replace(j, " руб.", "", -1)
@@ -448,7 +502,7 @@ func parseNotFull()  {
 	}
 	inf.Discount = 0
 	inf.OldPrice = 0
-	tableRows = append(tableRows, inf)
+	res = append(res, inf)
 }
 
 type Information struct {
