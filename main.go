@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -63,10 +64,10 @@ loop:
 			continue
 		}
 	}
-	//fmt.Println(len(tableRows))
-	//for i, j := range tableRows {
-	//	fmt.Println(i, j)
-	//}
+	fmt.Println(len(tableRows))
+	for i, j := range tableRows {
+		fmt.Println(i, j)
+	}
 }
 
 func tableBodyParse() {
@@ -149,11 +150,13 @@ loop:
 			continue
 		}
 	}
-	if len(data) < 14 {
-
+	if len(data) < 14 && len(data) > 0 {
+		parseNotFull()
+		data = []string{}
+	}else if len(data) > 0 && len(data) == 14 {
+		parseFull()
+		data = []string{}
 	}
-	myLog.write(fmt.Sprintf(`%d: %s`, len(data), data))
-	data = []string{}
 }
 
 func cellParse() {
@@ -193,6 +196,282 @@ loop:
 		}
 	}
 
+}
+
+func parseFull() {
+	inf := Information{}
+	for i, j := range data {
+		switch i {
+		case 0:
+			inf.ProductName = j
+			i++
+		case 1:
+			inf.Category = j
+			i++
+		case 2:
+			if j == `null` {
+				inf.NumberOfReviews = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 2: "))
+				}
+				inf.NumberOfReviews = int64(nm)
+			}
+			i++
+		case 3:
+			if j == `null` {
+				inf.SKU = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 3: "))
+				}
+				inf.SKU = int64(nm)
+			}
+			i++
+		case 4:
+			inf.Seller = j
+			i++
+		case 5:
+			inf.Brand = j
+			i++
+		case 6:
+			if j == `null` {
+				inf.QuantityInStock = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 6: "))
+				}
+				inf.QuantityInStock = int64(nm)
+			}
+			i++
+		case 7:
+			if j == `null` {
+				inf.Price = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 7: "))
+				}
+				inf.Price = nm
+			}
+			i++
+		case 8:
+			if j == `null` {
+				inf.Discount = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				tx = strings.Replace(tx, "%", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 8: "))
+				}
+				inf.Discount = int64(nm)
+			}
+			i++
+		case 9:
+			if j == `null` {
+				inf.OldPrice = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 9: "))
+				}
+				inf.OldPrice = nm
+			}
+			i++
+		case 10:
+			if j == `null` {
+				inf.ACP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 10: "))
+				}
+				inf.ACP = nm
+			}
+			i++
+		case 11:
+			if j == `null` {
+				inf.LP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 11: "))
+				}
+				inf.LP = nm
+			}
+			i++
+		case 12:
+			if j == `null` {
+				inf.AmountOfSales = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 12: "))
+				}
+				inf.AmountOfSales = int64(nm)
+			}
+			i++
+		case 13:
+			if j == `null` {
+				inf.Revenue = 0
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 13: "))
+				}
+				inf.Revenue = nm
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			}
+		}
+	}
+}
+
+func parseNotFull()  {
+	inf := Information{}
+	for i, j := range data {
+		switch i {
+		case 0:
+			inf.ProductName = j
+			i++
+		case 1:
+			inf.Category = j
+			i++
+		case 2:
+			if j == `null` {
+				inf.NumberOfReviews = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 2: "))
+				}
+				inf.NumberOfReviews = int64(nm)
+			}
+			i++
+		case 3:
+			if j == `null` {
+				inf.SKU = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 3: "))
+				}
+				inf.SKU = int64(nm)
+			}
+			i++
+		case 4:
+			inf.Seller = j
+			i++
+		case 5:
+			inf.Brand = j
+			i++
+		case 6:
+			if j == `null` {
+				inf.QuantityInStock = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 6: "))
+				}
+				inf.QuantityInStock = int64(nm)
+			}
+			i++
+		case 7:
+			if j == `null` {
+				inf.Price = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 7: "))
+				}
+				inf.Price = nm
+			}
+			i++
+		case 8:
+			if j == `null` {
+				inf.ACP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 10: "))
+				}
+				inf.ACP = nm
+			}
+			i++
+		case 9:
+			if j == `null` {
+				inf.LP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 11: "))
+				}
+				inf.LP = nm
+			}
+			i++
+		case 10:
+			if j == `null` {
+				inf.AmountOfSales = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 12: "))
+				}
+				inf.AmountOfSales = int64(nm)
+			}
+			i++
+		case 11:
+			if j == `null` {
+				inf.Revenue = 0
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 13: "))
+				}
+				inf.Revenue = nm
+				i = 0
+
+				inf = Information{}
+			}
+		}
+	}
+	inf.Discount = 0
+	inf.OldPrice = 0
+	tableRows = append(tableRows, inf)
 }
 
 type Information struct {
