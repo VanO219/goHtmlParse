@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
+	"golang.org/x/net/html"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/pkg/errors"
-	"golang.org/x/net/html"
+	"strings"
 )
 
 var (
@@ -24,29 +24,50 @@ func main() {
 
 	depth := 0
 	//loop:
+	var tgname string
+	var tgtext string
 	for {
 		tt := z.Next()
 		switch tt {
 		case html.ErrorToken:
 			fmt.Println(z.Err())
 			return
-		//case html.TextToken:
-		//	if depth > 0 {
-		//		// emitBytes should copy the []byte it receives,
-		//		// if it doesn't process it immediately.
-		//		myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
-		//	}
+		case html.TextToken:
+			if depth > 0 {
+				// emitBytes should copy the []byte it receives,
+				// if it doesn't process it immediately.
+				//myLog.write(fmt.Sprintf("TEXT, %s: %s",tagname(z), strings.TrimSpace(string(z.Text()))))
+				tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
+				if tgtext != "" {
+					myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
+				}
+			}
 		case html.StartTagToken, html.EndTagToken:
 			//tn, _ := z.TagName()
 			if tt == html.StartTagToken {
 				//myLog.write(tagname(z))
 				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
 				//log.Println(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
-				fmt.Println(z.Text())
-				if tagname(z) == `table` {
-					parseColumns(z)
-				}
+				//fmt.Println(z.Text())
+				//if tagname(z) == `table` {
+				//	parseColumns(z)
+				//}
+				//name := tagname(z)
+				//text := string(z.Text())
+				//text := strings.TrimSpace(string(z.Text()))
+				//if text != "" {
+				//	text = standardizeSpaces(text)
+				//	myLog.write(fmt.Sprintf("TEXT, %s: %s",name, text))
+				//}
+				tgname = tagname(z)
 				depth++
+				//if z.Next() == html.TextToken && depth > 0 {
+				//	text := strings.TrimSpace(string(z.Text()))
+				//	if text != "" {
+				//		text = standardizeSpaces(text)
+				//		myLog.write(fmt.Sprintf("TEXT, %s: %s",name, text))
+				//	}
+				//}
 			} else {
 				depth--
 				//myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
@@ -166,4 +187,8 @@ func (i *infoLogger) closeFile() {
 	if err := i.file.Close(); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func standardizeSpaces(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
