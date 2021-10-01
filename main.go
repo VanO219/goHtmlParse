@@ -199,15 +199,14 @@ loop:
 }
 
 func parseFull() {
+	//myLog.write(fmt.Sprintf("parseFull len: %d, \n %s", len(data), data))
 	inf := Information{}
 	for i, j := range data {
 		switch i {
 		case 0:
 			inf.ProductName = j
-			i++
 		case 1:
 			inf.Category = j
-			i++
 		case 2:
 			if j == `null` {
 				inf.NumberOfReviews = 0
@@ -220,7 +219,6 @@ func parseFull() {
 				}
 				inf.NumberOfReviews = int64(nm)
 			}
-			i++
 		case 3:
 			if j == `null` {
 				inf.SKU = 0
@@ -231,13 +229,10 @@ func parseFull() {
 				}
 				inf.SKU = int64(nm)
 			}
-			i++
 		case 4:
 			inf.Seller = j
-			i++
 		case 5:
 			inf.Brand = j
-			i++
 		case 6:
 			if j == `null` {
 				inf.QuantityInStock = 0
@@ -248,7 +243,6 @@ func parseFull() {
 				}
 				inf.QuantityInStock = int64(nm)
 			}
-			i++
 		case 7:
 			if j == `null` {
 				inf.Price = 0
@@ -261,7 +255,6 @@ func parseFull() {
 				}
 				inf.Price = nm
 			}
-			i++
 		case 8:
 			if j == `null` {
 				inf.Discount = 0
@@ -275,7 +268,6 @@ func parseFull() {
 				}
 				inf.Discount = int64(nm)
 			}
-			i++
 		case 9:
 			if j == `null` {
 				inf.OldPrice = 0
@@ -288,7 +280,6 @@ func parseFull() {
 				}
 				inf.OldPrice = nm
 			}
-			i++
 		case 10:
 			if j == `null` {
 				inf.ACP = 0
@@ -301,7 +292,6 @@ func parseFull() {
 				}
 				inf.ACP = nm
 			}
-			i++
 		case 11:
 			if j == `null` {
 				inf.LP = 0
@@ -314,7 +304,6 @@ func parseFull() {
 				}
 				inf.LP = nm
 			}
-			i++
 		case 12:
 			if j == `null` {
 				inf.AmountOfSales = 0
@@ -325,7 +314,6 @@ func parseFull() {
 				}
 				inf.AmountOfSales = int64(nm)
 			}
-			i++
 		case 13:
 			if j == `null` {
 				inf.Revenue = 0
@@ -349,15 +337,14 @@ func parseFull() {
 }
 
 func parseNotFull()  {
+	//myLog.write(fmt.Sprintf("parseNotFull len: %d, \n %s", len(data), data))
 	inf := Information{}
 	for i, j := range data {
 		switch i {
 		case 0:
 			inf.ProductName = j
-			i++
 		case 1:
 			inf.Category = j
-			i++
 		case 2:
 			if j == `null` {
 				inf.NumberOfReviews = 0
@@ -370,7 +357,6 @@ func parseNotFull()  {
 				}
 				inf.NumberOfReviews = int64(nm)
 			}
-			i++
 		case 3:
 			if j == `null` {
 				inf.SKU = 0
@@ -381,13 +367,10 @@ func parseNotFull()  {
 				}
 				inf.SKU = int64(nm)
 			}
-			i++
 		case 4:
 			inf.Seller = j
-			i++
 		case 5:
 			inf.Brand = j
-			i++
 		case 6:
 			if j == `null` {
 				inf.QuantityInStock = 0
@@ -398,7 +381,6 @@ func parseNotFull()  {
 				}
 				inf.QuantityInStock = int64(nm)
 			}
-			i++
 		case 7:
 			if j == `null` {
 				inf.Price = 0
@@ -411,7 +393,6 @@ func parseNotFull()  {
 				}
 				inf.Price = nm
 			}
-			i++
 		case 8:
 			if j == `null` {
 				inf.ACP = 0
@@ -424,7 +405,6 @@ func parseNotFull()  {
 				}
 				inf.ACP = nm
 			}
-			i++
 		case 9:
 			if j == `null` {
 				inf.LP = 0
@@ -437,7 +417,6 @@ func parseNotFull()  {
 				}
 				inf.LP = nm
 			}
-			i++
 		case 10:
 			if j == `null` {
 				inf.AmountOfSales = 0
@@ -448,7 +427,6 @@ func parseNotFull()  {
 				}
 				inf.AmountOfSales = int64(nm)
 			}
-			i++
 		case 11:
 			if j == `null` {
 				inf.Revenue = 0
@@ -464,8 +442,6 @@ func parseNotFull()  {
 				}
 				inf.Revenue = nm
 				i = 0
-
-				inf = Information{}
 			}
 		}
 	}
