@@ -4,14 +4,21 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 var (
-	myLog *infoLogger
+	myLog     *infoLogger
+	z         *html.Tokenizer
+	tgname    string
+	tgtext    string
+	tableRows []Information
+	depth     = 0
+	data      = []string{}
 )
 
 func main() {
@@ -20,87 +27,511 @@ func main() {
 	myLog = newInfoLogger("./output.txt")
 	defer myLog.closeFile()
 
-	z := html.NewTokenizer(f)
+	z = html.NewTokenizer(f)
 
-	depth := 0
-	//loop:
+loop:
 	for {
 		tt := z.Next()
+		tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
+
 		switch tt {
 		case html.ErrorToken:
 			fmt.Println(z.Err())
 			return
 		case html.TextToken:
 			if depth > 0 {
-				// emitBytes should copy the []byte it receives,
-				// if it doesn't process it immediately.
-				myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
+				//if tgtext != "" {
+				//	myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
+				//}
+				continue
 			}
 		case html.StartTagToken, html.EndTagToken:
-			tn, _ := z.TagName()
 			if tt == html.StartTagToken {
-				parseColumns(f)
-				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				tgname = tagname(z)
 				depth++
+				if tgname == `tbody` {
+					tableBodyParse()
+					break loop
+				}
+			} else {
+				//myLog.write(fmt.Sprintf("Close, %s, ", tagname(z)))
+				depth--
+				continue
+			}
+		case html.SelfClosingTagToken:
+			continue
+		default:
+			continue
+		}
+	}
+	fmt.Println(len(tableRows))
+	for i, j := range tableRows {
+		fmt.Println(i, j)
+	}
+}
+
+func tableBodyParse() {
+loop:
+	for {
+		tt := z.Next()
+		tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
+
+		switch tt {
+		case html.ErrorToken:
+			fmt.Println(z.Err())
+			return
+		case html.TextToken:
+			if depth > 0 {
+				if tgtext != "" {
+					//myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
+				}
+				continue
+			}
+		case html.StartTagToken, html.EndTagToken:
+			if tt == html.StartTagToken {
+				tgname = tagname(z)
+				depth++
+				if tgname == `tr` {
+					rawTableParse()
+				}
 			} else {
 				depth--
-				myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
+				tgname = tagname(z)
+				if tgname == `tbody` {
+					break loop
+				}
+				continue
 			}
-			case html.SelfClosingTagToken:
-				tn, _ := z.TagName()
-				myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
-			default:
-				tn, _ := z.TagName()
-				myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
+		case html.SelfClosingTagToken:
+			continue
+		default:
+			continue
 		}
 	}
 }
 
-func parseColumns(reader io.Reader) {
-	z := html.NewTokenizer(reader)
-	tt := z.Next()
-	if tt != html.StartTagToken {
-		return
-	}
-	tn, _ := z.TagName()
-	if string(tn) != `thead` {
-		return
-	}
-	tt = z.Next()
-	if tt != html.StartTagToken {
-		return
-	}
-	tn, _ = z.TagName()
-	if string(tn) != `tr` {
-		return
-	}
-	tt = z.Next()
-	if tt != html.StartTagToken {
-		return
-	}
-	//tn, _ = z.TagName()
-	//if string(tn) != `th` {
-	//	return
-	//}
-
-	//cols:=[]string{}
-	//loop:
+func rawTableParse() {
+loop:
 	for {
-		tt = z.Next()
+		tt := z.Next()
+		tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
+
 		switch tt {
-		case html.StartTagToken:
-			if tt == html.TextToken {
-				myLog.write(fmt.Sprintf("TEXT %s", string(z.Text())))
+		case html.ErrorToken:
+			fmt.Println(z.Err())
+			return
+		case html.TextToken:
+			if depth > 0 {
+				if tgtext != "" {
+					//myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
+					data = append(data, tgtext)
+				}
+				continue
 			}
+		case html.StartTagToken, html.EndTagToken:
+			if tt == html.StartTagToken {
+				tgname = tagname(z)
+				depth++
+
+			} else {
+				depth--
+				tgname = tagname(z)
+				if tgname == `td` {
+					cellParse()
+				} else if tgname == `tr` {
+					//myLog.write(`-------------------------------`)
+					break loop
+				}
+				continue
+			}
+		case html.SelfClosingTagToken:
 			continue
-		case html.EndTagToken:
-			if tn, _ = z.TagName(); string(tn) != `tr` {
-				return
+		default:
+			continue
+		}
+	}
+	if len(data) < 14 && len(data) > 0 {
+		parseNotFull()
+		data = []string{}
+	}else if len(data) > 0 && len(data) == 14 {
+		parseFull()
+		data = []string{}
+	}
+}
+
+func cellParse() {
+loop:
+	for {
+		tt := z.Next()
+		tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
+
+		switch tt {
+		case html.ErrorToken:
+			fmt.Println(z.Err())
+			return
+		case html.TextToken:
+			if depth > 0 {
+				if tgtext != "" {
+					//myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
+					data = append(data, tgtext)
+				}
+				continue
 			}
+		case html.StartTagToken, html.EndTagToken:
+			if tt == html.StartTagToken {
+				tgname = tagname(z)
+				depth++
+
+			} else {
+				depth--
+				tgname = tagname(z)
+				if tgname == `td` {
+					break loop
+				}
+			}
+		case html.SelfClosingTagToken:
+			continue
+		default:
 			continue
 		}
 	}
 
+}
+
+func parseFull() {
+	//myLog.write(fmt.Sprintf("parseFull len: %d, \n %s", len(data), data))
+	inf := Information{}
+	for i, j := range data {
+		switch i {
+		case 0:
+			inf.ProductName = j
+		case 1:
+			inf.Category = j
+		case 2:
+			if j == `null` {
+				inf.NumberOfReviews = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 2: "))
+				}
+				inf.NumberOfReviews = int64(nm)
+			}
+		case 3:
+			if j == `null` {
+				inf.SKU = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 3: "))
+				}
+				inf.SKU = int64(nm)
+			}
+		case 4:
+			inf.Seller = j
+		case 5:
+			inf.Brand = j
+		case 6:
+			if j == `null` {
+				inf.QuantityInStock = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 6: "))
+				}
+				inf.QuantityInStock = int64(nm)
+			}
+		case 7:
+			if j == `null` {
+				inf.Price = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 7: "))
+				}
+				inf.Price = nm
+			}
+		case 8:
+			if j == `null` {
+				inf.Discount = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				tx = strings.Replace(tx, "%", "", -1)
+				tx = strings.Replace(tx, "-", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 8: "))
+				}
+				inf.Discount = int64(nm)
+			}
+		case 9:
+			if j == `null` {
+				inf.OldPrice = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 9: "))
+				}
+				inf.OldPrice = nm
+			}
+		case 10:
+			if j == `null` {
+				inf.ACP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 10: "))
+				}
+				inf.ACP = nm
+			}
+		case 11:
+			if j == `null` {
+				inf.LP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 11: "))
+				}
+				inf.LP = nm
+			}
+		case 12:
+			if j == `null` {
+				inf.AmountOfSales = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 12: "))
+				}
+				inf.AmountOfSales = int64(nm)
+			}
+		case 13:
+			if j == `null` {
+				inf.Revenue = 0
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 13: "))
+				}
+				inf.Revenue = nm
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			}
+		}
+	}
+}
+
+func parseNotFull()  {
+	//myLog.write(fmt.Sprintf("parseNotFull len: %d, \n %s", len(data), data))
+	inf := Information{}
+	for i, j := range data {
+		switch i {
+		case 0:
+			inf.ProductName = j
+		case 1:
+			inf.Category = j
+		case 2:
+			if j == `null` {
+				inf.NumberOfReviews = 0
+			} else {
+				tx := strings.Replace(j, "(", "", -1)
+				tx = strings.Replace(tx, ")", "", -1)
+				nm, err := strconv.Atoi(tx)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 2: "))
+				}
+				inf.NumberOfReviews = int64(nm)
+			}
+		case 3:
+			if j == `null` {
+				inf.SKU = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 3: "))
+				}
+				inf.SKU = int64(nm)
+			}
+		case 4:
+			inf.Seller = j
+		case 5:
+			inf.Brand = j
+		case 6:
+			if j == `null` {
+				inf.QuantityInStock = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 6: "))
+				}
+				inf.QuantityInStock = int64(nm)
+			}
+		case 7:
+			if j == `null` {
+				inf.Price = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 7: "))
+				}
+				inf.Price = nm
+			}
+		case 8:
+			if j == `null` {
+				inf.ACP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 10: "))
+				}
+				inf.ACP = nm
+			}
+		case 9:
+			if j == `null` {
+				inf.LP = 0
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 11: "))
+				}
+				inf.LP = nm
+			}
+		case 10:
+			if j == `null` {
+				inf.AmountOfSales = 0
+			} else {
+				nm, err := strconv.Atoi(j)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 12: "))
+				}
+				inf.AmountOfSales = int64(nm)
+			}
+		case 11:
+			if j == `null` {
+				inf.Revenue = 0
+				i = 0
+				tableRows = append(tableRows, inf)
+				inf = Information{}
+			} else {
+				tx := strings.Replace(j, " руб.", "", -1)
+				tx = strings.Replace(tx, ",", "", -1)
+				nm, err := strconv.ParseFloat(tx, 64)
+				if err != nil {
+					log.Fatalln(errors.Wrap(err, "case 13: "))
+				}
+				inf.Revenue = nm
+				i = 0
+			}
+		}
+	}
+	inf.Discount = 0
+	inf.OldPrice = 0
+	tableRows = append(tableRows, inf)
+}
+
+type Information struct {
+	ProductName     string
+	Category        string
+	NumberOfReviews int64
+	SKU             int64
+	Seller          string
+	Brand           string
+	QuantityInStock int64
+	Price           float64
+	Discount        int64
+	OldPrice        float64
+	ACP             float64
+	LP              float64
+	AmountOfSales   int64
+	Revenue         float64
+}
+
+//func parseColumns(z *html.Tokenizer) {
+//	//z := html.NewTokenizer(reader)
+//	tt := z.Next()
+//	if tt != html.StartTagToken {
+//		return
+//	}
+//	tn, _ := z.TagName()
+//	if string(tn) != `thead` {
+//		return
+//	}
+//	headers := parseHeaders(z)
+//	myLog.write(fmt.Sprintf(`%v`, headers))
+//	tt = z.Next()
+//	if tt != html.EndTagToken {
+//		tn, _ := z.TagName()
+//		if string(tn) != `thead` {
+//			return
+//		}
+//	}
+//}
+
+//func parseHeaders(z *html.Tokenizer) (out []string) {
+//	//z := html.NewTokenizer(in)
+//	tt := z.Next()
+//	if tt != html.StartTagToken {
+//		return
+//	}
+//	tn, _ := z.TagName()
+//	if string(tn) != `tr` {
+//		return
+//	}
+//	tt = z.Next()
+//	if tt != html.StartTagToken {
+//		return
+//	}
+//loop:
+//	for {
+//		tt = z.Next()
+//		myLog.write(fmt.Sprintf("swich %s", tt.String()))
+//		switch tt {
+//		case html.StartTagToken:
+//			bs, _ := z.TagName()
+//			if string(bs) != `th` {
+//				continue loop
+//			}
+//			tt = z.Next()
+//			if tt != html.TextToken {
+//				myLog.write(string(z.Text()))
+//				// TODO отработать вложенные елементыы
+//				continue loop
+//			}
+//			out = append(out, string(z.Text()))
+//		case html.EndTagToken:
+//			if tn, _ = z.TagName(); string(tn) != `tr` {
+//				return
+//			}
+//		}
+//	}
+//
+//}
+
+func tagname(t *html.Tokenizer) (out string) {
+	bs, _ := t.TagName()
+	return string(bs)
 }
 
 type infoLogger struct {
@@ -141,4 +572,8 @@ func (i *infoLogger) closeFile() {
 	if err := i.file.Close(); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func standardizeSpaces(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
