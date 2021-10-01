@@ -262,6 +262,7 @@ func parseFull() {
 				tx := strings.Replace(j, "(", "", -1)
 				tx = strings.Replace(tx, ")", "", -1)
 				tx = strings.Replace(tx, "%", "", -1)
+				tx = strings.Replace(tx, "-", "", -1)
 				nm, err := strconv.Atoi(tx)
 				if err != nil {
 					log.Fatalln(errors.Wrap(err, "case 8: "))
