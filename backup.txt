@@ -11,12 +11,10 @@ import (
 )
 
 var (
-	myLog  *infoLogger
-	z      *html.Tokenizer
+	myLog *infoLogger
+	z *html.Tokenizer
 	tgname string
 	tgtext string
-	tableRows []Information
-	depth = 0
 )
 
 func main() {
@@ -27,7 +25,7 @@ func main() {
 
 	z = html.NewTokenizer(f)
 
-
+	depth := 0
 	for {
 		tt := z.Next()
 		switch tt {
@@ -36,22 +34,52 @@ func main() {
 			return
 		case html.TextToken:
 			if depth > 0 {
+				// emitBytes should copy the []byte it receives,
+				// if it doesn't process it immediately.
+				//myLog.write(fmt.Sprintf("TEXT, %s: %s",tagname(z), strings.TrimSpace(string(z.Text()))))
 				tgtext = standardizeSpaces(strings.TrimSpace(string(z.Text())))
 				if tgtext != "" {
 					myLog.write(fmt.Sprintf("TEXT, %s, %s", tgname, tgtext))
 				}
 			}
 		case html.StartTagToken, html.EndTagToken:
+			//tn, _ := z.TagName()
 			if tt == html.StartTagToken {
+				//myLog.write(tagname(z))
+				//myLog.write(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				//log.Println(fmt.Sprintf(`OPEN %s %d`, string(tn), depth))
+				//fmt.Println(z.Text())
+				//if tagname(z) == `table` {
+				//	parseColumns(z)
+				//}
+				//name := tagname(z)
+				//text := string(z.Text())
+				//text := strings.TrimSpace(string(z.Text()))
+				//if text != "" {
+				//	text = standardizeSpaces(text)
+				//	myLog.write(fmt.Sprintf("TEXT, %s: %s",name, text))
+				//}
 				tgname = tagname(z)
 				depth++
+				//if z.Next() == html.TextToken && depth > 0 {
+				//	text := strings.TrimSpace(string(z.Text()))
+				//	if text != "" {
+				//		text = standardizeSpaces(text)
+				//		myLog.write(fmt.Sprintf("TEXT, %s: %s",name, text))
+				//	}
+				//}
 			} else {
 				depth--
+				//myLog.write(fmt.Sprintf(`CLOSE %s %d`, string(tn), depth))
 				continue
 			}
 		case html.SelfClosingTagToken:
+			//tn, _ := z.TagName()
+			//myLog.write(fmt.Sprintf(`EMPTY %s %d`, string(tn), depth))
 			continue
 		default:
+			//tn, _ := z.TagName()
+			//myLog.write(fmt.Sprintf(`SKIP %s %d %s`, string(tn), depth, z.Token().Type))
 			continue
 		}
 	}
@@ -61,26 +89,7 @@ func tagname(t *html.Tokenizer) (out string) {
 	return string(bs)
 }
 
-func tableBodyParse() {
 
-}
-
-type Information struct {
-	ProductName     string
-	Category        string
-	NumberOfReviews int64
-	SKU             int64
-	Seller          string
-	Brand           string
-	QuantityInStock int64
-	Price           float64
-	Discount        string
-	OldPrice        float64
-	ACP             float64
-	LP              float64
-	AmountOfSales   int64
-	Revenue         float64
-}
 
 //func parseColumns(z *html.Tokenizer) {
 //	//z := html.NewTokenizer(reader)
