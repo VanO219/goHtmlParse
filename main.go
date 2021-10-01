@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	myLog  *infoLogger
-	z      *html.Tokenizer
-	tgname string
-	tgtext string
+	myLog     *infoLogger
+	z         *html.Tokenizer
+	tgname    string
+	tgtext    string
 	tableRows []Information
-	depth = 0
+	depth     = 0
 )
 
 func main() {
@@ -74,7 +74,7 @@ func tagname(t *html.Tokenizer) (out string) {
 }
 
 func tableBodyParse() {
-	i:=0
+	i := 0
 	inf := Information{}
 loop:
 	for {
@@ -96,20 +96,28 @@ loop:
 						inf.Category = tgtext
 						i++
 					case 2:
-						tx := strings.Replace(tgtext, "(", "", -1)
-						tx = strings.Replace(tx, ")", "", -1)
-						nm, err := strconv.Atoi(tx)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 2: "))
+						if tgtext == `null` {
+							inf.NumberOfReviews = 0
+						} else {
+							tx := strings.Replace(tgtext, "(", "", -1)
+							tx = strings.Replace(tx, ")", "", -1)
+							nm, err := strconv.Atoi(tx)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 2: "))
+							}
+							inf.NumberOfReviews = int64(nm)
 						}
-						inf.NumberOfReviews = int64(nm)
 						i++
 					case 3:
-						nm, err := strconv.Atoi(tgtext)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 3: "))
+						if tgtext == `null` {
+							inf.SKU = 0
+						} else {
+							nm, err := strconv.Atoi(tgtext)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 3: "))
+							}
+							inf.SKU = int64(nm)
 						}
-						inf.SKU = int64(nm)
 						i++
 					case 4:
 						inf.Seller = tgtext
@@ -118,86 +126,111 @@ loop:
 						inf.Brand = tgtext
 						i++
 					case 6:
-						nm, err := strconv.Atoi(tgtext)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 6: "))
+						if tgtext == `null` {
+							inf.QuantityInStock = 0
+						} else {
+							nm, err := strconv.Atoi(tgtext)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 6: "))
+							}
+							inf.QuantityInStock = int64(nm)
 						}
-						inf.QuantityInStock = int64(nm)
 						i++
 					case 7:
-						tx := strings.Replace(tgtext, ",", "", -1)
-						tx = strings.Replace(tx, ".", ",", -1)
-						tx = strings.Replace(tx, " руб.", "", -1)
-						tx = strings.Replace(tx, " руб,", "", -1)
-						nm, err := strconv.ParseFloat(tx,64)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 7: "))
+						if tgtext == `null` {
+							inf.Price = 0
+						} else {
+							tx := strings.Replace(tgtext, " руб.", "", -1)
+							tx = strings.Replace(tx, ",", "", -1)
+							nm, err := strconv.ParseFloat(tx, 64)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 7: "))
+							}
+							inf.Price = nm
 						}
-						inf.Price = nm
 						i++
 					case 8:
-						tx := strings.Replace(tgtext, "(", "", -1)
-						tx = strings.Replace(tx, ")", "", -1)
-						tx = strings.Replace(tx, "%", "", -1)
-						nm, err := strconv.Atoi(tx)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 8: "))
+						if tgtext == `null` {
+							inf.Discount = 0
+						} else {
+							tx := strings.Replace(tgtext, "(", "", -1)
+							tx = strings.Replace(tx, ")", "", -1)
+							tx = strings.Replace(tx, "%", "", -1)
+							nm, err := strconv.Atoi(tx)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 8: "))
+							}
+							inf.Discount = int64(nm)
 						}
-						inf.Discount = int64(nm)
 						i++
 					case 9:
-						tx := strings.Replace(tgtext, ",", "", -1)
-						tx = strings.Replace(tx, ".", ",", -1)
-						tx = strings.Replace(tx, " руб.", "", -1)
-						tx = strings.Replace(tx, " руб,", "", -1)
-						nm, err := strconv.ParseFloat(tx,64)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 9: "))
+						if tgtext == `null` {
+							inf.OldPrice = 0
+						} else {
+							tx := strings.Replace(tgtext, " руб.", "", -1)
+							tx = strings.Replace(tx, ",", "", -1)
+							nm, err := strconv.ParseFloat(tx, 64)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 9: "))
+							}
+							inf.OldPrice = nm
 						}
-						inf.OldPrice = nm
 						i++
 					case 10:
-						tx := strings.Replace(tgtext, ",", "", -1)
-						tx = strings.Replace(tx, ".", ",", -1)
-						tx = strings.Replace(tx, " руб.", "", -1)
-						tx = strings.Replace(tx, " руб,", "", -1)
-						nm, err := strconv.ParseFloat(tx,64)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 10: "))
+						if tgtext == `null` {
+							inf.ACP = 0
+						} else {
+							tx := strings.Replace(tgtext, " руб.", "", -1)
+							tx = strings.Replace(tx, ",", "", -1)
+							nm, err := strconv.ParseFloat(tx, 64)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 10: "))
+							}
+							inf.ACP = nm
 						}
-						inf.ACP = nm
 						i++
 					case 11:
-						tx := strings.Replace(tgtext, ",", "", -1)
-						tx = strings.Replace(tx, ".", ",", -1)
-						tx = strings.Replace(tx, " руб.", "", -1)
-						tx = strings.Replace(tx, " руб,", "", -1)
-						nm, err := strconv.ParseFloat(tx,64)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 11: "))
+						if tgtext == `null` {
+							inf.LP = 0
+						} else {
+							tx := strings.Replace(tgtext, " руб.", "", -1)
+							tx = strings.Replace(tx, ",", "", -1)
+							nm, err := strconv.ParseFloat(tx, 64)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 11: "))
+							}
+							inf.LP = nm
 						}
-						inf.LP = nm
 						i++
 					case 12:
-						nm, err := strconv.Atoi(tgtext)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 12: "))
+						if tgtext == `null` {
+							inf.AmountOfSales = 0
+						} else {
+							nm, err := strconv.Atoi(tgtext)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 12: "))
+							}
+							inf.AmountOfSales = int64(nm)
 						}
-						inf.AmountOfSales = int64(nm)
 						i++
 					case 13:
-						tx := strings.Replace(tgtext, ",", "", -1)
-						tx = strings.Replace(tx, ".", ",", -1)
-						tx = strings.Replace(tx, " руб.", "", -1)
-						tx = strings.Replace(tx, " руб,", "", -1)
-						nm, err := strconv.ParseFloat(tx,64)
-						if err != nil {
-							log.Fatalln(errors.Wrap(err, "case 13: "))
+						if tgtext == `null` {
+							inf.Revenue = 0
+							i = 0
+							tableRows = append(tableRows, inf)
+							inf = Information{}
+						} else {
+							tx := strings.Replace(tgtext, " руб.", "", -1)
+							tx = strings.Replace(tx, ",", "", -1)
+							nm, err := strconv.ParseFloat(tx, 64)
+							if err != nil {
+								log.Fatalln(errors.Wrap(err, "case 13: "))
+							}
+							inf.Revenue = nm
+							i = 0
+							tableRows = append(tableRows, inf)
+							inf = Information{}
 						}
-						inf.Revenue = nm
-						i = 0
-						tableRows = append(tableRows, inf)
-						inf = Information{}
 					}
 				}
 			}
